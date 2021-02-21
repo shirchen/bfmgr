@@ -70,7 +70,6 @@
     },
     "Region":{
       "Type":"String",
-      "Default" : { "Ref" : "AWS::Region" },
       "Description":"Region."
     },
     "KeyName": {
@@ -126,7 +125,7 @@
                     "Ref":"ServerTag"
                   },
                   "\n",
-                  "docker run --name buildfarm-server -p 8980:8980 -v /var/lib/buildfarm-server/server.config:/var/lib/buildfarm-server/server.config ",
+                  "docker run --name buildfarm-server --network host -v /var/lib/buildfarm-server/server.config:/var/lib/buildfarm-server/server.config ",
                   {
                     "Ref":"ServerRepo"
                   },
@@ -152,6 +151,15 @@
           "ImageId":{
             "Ref":"AmiImageId"
           },
+          "BlockDeviceMappings": [
+            {
+              "DeviceName":"/dev/xvda",
+              "Ebs": {
+                "VolumeSize": 1000,
+                "VolumeType": "gp2"
+              }
+            }
+          ],
           "InstanceType":{
             "Ref":"ServerInstanceType"
           },
@@ -200,6 +208,7 @@
                 [
                   "#!/bin/bash\n\n",
                   "mkdir -p /tmp/worker\n",
+                  "chmod 777 /tmp/worker\n",
                   "#set worker public name\n",
                   "PUBLIC_NAME=$(curl http://169.254.169.254/latest/meta-data/local-ipv4):8981\n",
                   "REDIS_ENDPOINT=",
@@ -238,7 +247,7 @@
                     "Ref":"WorkerTag"
                   },
                   "\n",
-                  "docker run -d --name buildfarm-worker --privileged -v /var/lib/buildfarm-shard-worker/worker.config:/var/lib/buildfarm-shard-worker/worker.config -v /tmp/worker:/tmp/worker -p 8981:8981 ",
+                  "docker run -d --name buildfarm-worker --network host --privileged -v /var/lib/buildfarm-shard-worker/worker.config:/var/lib/buildfarm-shard-worker/worker.config -v /tmp/worker:/tmp/worker -p 8981:8981 ",
                   {
                     "Ref":"WorkerRepo"
                   },
@@ -264,6 +273,16 @@
           "ImageId":{
             "Ref":"AmiImageId"
           },
+          "BlockDeviceMappings": [
+            {
+              "DeviceName":"/dev/xvda",
+              "Ebs": {
+                "VolumeSize": 1000,
+                "VolumeType": "io2",
+                "Iops": 3000
+              }
+            }
+          ],
           "InstanceType":{
             "Ref":"WorkerInstanceType"
           },
@@ -375,11 +394,11 @@
       "Type":"AWS::AutoScaling::AutoScalingGroup",
       "Properties":{
         "Cooldown":"60",
-        "DesiredCapacity": 1,
+        "DesiredCapacity": 10,
         "HealthCheckGracePeriod":"120",
         "HealthCheckType":"ELB",
-        "MaxSize": 1,
-        "MinSize": 0,
+        "MaxSize": 20,
+        "MinSize": 10,
         "VPCZoneIdentifier":{
           "Ref":"SubnetPool"
         },
@@ -434,11 +453,11 @@
       "Type":"AWS::AutoScaling::AutoScalingGroup",
       "Properties":{
         "Cooldown":"60",
-        "DesiredCapacity": 1,
+        "DesiredCapacity": 15,
         "HealthCheckGracePeriod":"120",
         "HealthCheckType":"EC2",
-        "MaxSize": 1,
-        "MinSize": 0,
+        "MaxSize": 20,
+        "MinSize": 10,
         "VPCZoneIdentifier":{
           "Ref":"SubnetPool"
         },
